@@ -1,0 +1,334 @@
+I. Pre-installation
+
+#download arch linux iso
+#Verify signature
+
+  gpg --keyserver pgp.mit.edu --keyserver-options auto-key-retrieve --verify archlinux-version-x86_64.iso.sig
+
+#Create UEFI bootable USB {lsblk see where your usb sdb or sdc}
+
+  wipefs --all /dev/sdx
+  dd bs=4M if=path/to/archlinux.iso of=/dev/sdx status=progress oflag=sync
+
+#Boot to live environment
+#Set the keyboard layout
+  
+  loadkeys us
+
+#Verify the boot mode UEFI
+  
+  ls /sys/firmware/efi/efivars
+
+#Connect to the Internet
+  
+  wifi-menu
+  ping -c 5 8.8.8.8
+
+#Update the system clock
+  
+  timedatectl set-ntp true
+  timedatectl set-timezone Asia/Jakarta
+
+#layout partition disks :
+Number  Start (sector)    End (sector)  Size       Code  Name
+   1            2048         1050623   512.0 MiB   EF00  EFI System
+   2         1050624       839911423   400.0 GiB   8300  Linux filesystem
+
+#Delete all partitions create new gpt partitions
+   
+  gdisk /dev/sda
+  o = blank gpt
+  y = yes
+  w = write
+
+#setup partition
+ 
+ gdisk /dev/sda
+
+#create EFI System partitions size 100M
+
+  n
+  1
+  2048
+  100M
+  EF00
+
+#Create Linux filesystem (use default)
+
+  n
+  2
+  1050624
+  839911423
+  8300
+  w
+  y
+
+#Encrypt System partition root and swap
+  
+  cryptsetup --user-random luksFormat --cipher aes-xts-plain64 -h sha512 -s 512 --type luks2 /dev/sda2
+  cryptsetup open /dev/sda2 disklvm
+  pvcreate /dev/mapper/disklvm
+  vgcreate volumelvm /dev/mapper/disklvm
+  lvcreate -L +8G volumelvm -n swap
+  lvcreate -l +100%FREE volumelvm -n root
+
+#Create filesystems for efi, boot, root and swap
+  
+  mkfs.vfat -F 32 /dev/sda1
+  mkfs.ext4 /dev/volumelvm/root
+  mkswap /dev/volumelvm/swap
+
+#Mount for install ArchLinux
+  mount /dev/volumelvm/root /mnt
+  mkdir /mnt/boot
+  mount /dev/sda1 /mnt/boot
+  swapon /dev/volumelvm/swap
+   
+#speedup mirrorlist
+   
+  pacman -Sy reflector
+  reflector --score 100 --fastest 25 --sort rate --save /etc/pacman.d/mirrorlist --verbose  
+
+#install Arch linux system (my laptop intel; intel-ucode linux-headers broadcom-wl-dkms,my desktop amd: amd-ucode)
+   
+  pacstrap /mnt base base-devel dialog wpa_supplicant zsh git wget reflector amd-ucode
+
+#generate partition table fstab
+  
+  gefstab -U /mnt > /mnt/etc/fstab
+
+#enter chroot
+  
+  arch-chroot /mnt /bin/bash
+
+#Set time zone and sync clock
+   
+  ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+  hwclock --systohc --utc
+
+#set locale
+  
+  echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+  echo "LANG=en_us.UTF-8" > /etc/locale.conf
+  locale-gen
+
+#set keymap
+  
+  echo "KEYMAP=us" > /etc/vconsole.conf
+
+#set hostname
+   
+  echo "archlinux" > /etc/hostname
+
+#set hosts
+  
+  echo "127.0.0.1		localhost\n127.0.0.1	archlinux.localdomain	archilinux" > /etc/hosts
+
+#Set root Password
+   
+   passwd
+
+#create user with sudo access
+## Uncomment to allow members of group wheel to execute any command
+   
+   sed -i '/%wheel ALL=(ALL) ALL/s/^#//' /etc/sudoers
+   useradd -m -g wheel -s /usr/bin/zsh userarch
+   passwd userarch
+
+#set HOOKS initramfs; nano /etc/mkinitcpio.conf
+  HOOKS="base systemd udev autodetect keyboard sd-vconsole modconf block sd-encrypt sd-lvm2 filesystems fsck"
+
+#Generate initrd image:
+  
+  mkinitcpio -P
+
+#install Bootloader systemdboot
+   
+  bootctl install
+
+#add entries loader;nano /boot/loader/entries/arch.conf
+  title Arch Linux
+  linux /vmlinuz-linux
+  initrd /amd-ucode.img
+  initrd /initramfs-linux.img
+  options rd.luks.name=
+
+#exit save ctrl+x+y+enter
+#we need get UUID sda2 encrypt
+   
+  blkid -s UUID -o value /dev/sda2 disklvm >> /boot/loader/entries/arch.conf
+
+#edit entries loader;nano /boot/loader/entries/arch.conf
+  title Arch Linux
+  linux /vmlinuz-linux
+  initrd /amd-ucode.img
+  initrd /initramfs-linux.img
+  options rd.luks.name=value-of-blkid=cryptlvm root=/dev/volumelvm/root rw ipv6.disable=1 net.ifnames=0 biosdevname=0
+
+#exit save ctrl+x+y+enter
+
+#Some loader.conf;nano /boot/loader/loader.conf
+  editor no
+  auto-entries 1
+  auto-firmware 0
+
+#exit chroot
+   
+  exit
+  umount -R /mnt
+  swapoff -a
+  reboot
+
+II. After-installation
+############################ Setup system boot to new system ############################
+#will ask password for encrypt luks
+#login as userarch
+#connect to internet 
+
+#lan
+  
+  sudo systemctl enable dhcpcd.service
+  sudo systemctl start dhcpcd.service
+   
+#wifi
+  
+  sudo wifi-menu
+
+#if u forgot ssid profile
+  
+  ls /etc/netctl 
+
+#auto connect next boot
+  
+  sudo netctl enable wlan0-ssid
+  sudo netctl start wlan0-ssid
+
+#speedup mirrorlist
+  
+  sudo reflector --score 100 --fastest 25 --sort rate --save /etc/pacman.d/mirrorlist --verbose  
+
+#Enable multilib;sudo nano /etc/pacman.conf
+
+  [multilib]
+  Include = /etc/pacman.d/mirrorlist
+
+#refresh db multilib
+  
+  sudo pacman -Syu
+
+#install yay
+  
+  git clone https://aur.archlinux.org/yay.git
+  cd yay
+  makepkg -si
+   
+#Dotfile Setup
+
+   git clone https://github.com/djohanarch/Desktop-Arch.git
+   cd Desktop-Arch
+   sudo pacman -S --needed $(comm -12 <(pacman -Slq|sort) <(sort pkglist.txt) )
+   yay -S --noconfirm --needed aurpkglist.txt
+   mv -f .* ~/
+   sudo mv -f etc/lightdm/* /etc/lightdm
+   chmod +x usr/local/bin/*
+   sudo mv usr/local/bin/* /usr/local/bin
+   sudo mv usr/share/wallpapers/* /usr/share/wallpapers
+
+#allow the MPD user to use PulseAudio;sudo nano /etc/pulse/client.conf
+
+   change the autospawn option to yes
+
+#especiall add to /etc/sudoers; sudo nano /etc/sudoers
+   
+   userarch archlinux =NOPASSWD: /usr/bin/systemctl poweroff,/usr/bin/systemctl halt,/usr/bin/systemctl reboot
+ 
+   #This config is especially add to /etc/sudoers :
+   Defaults !requiretty, !tty_tickets, !umask
+   Defaults visiblepw, path_info, insults, lecture=always
+   Defaults loglinelen=0, logfile =/var/log/sudo.log, log_year, log_host, syslog=auth
+   Defaults passwd_tries=3, passwd_timeout=1
+   Defaults env_reset, always_set_home, set_home, set_logname
+   Defaults !env_editor, editor="/usr/bin/vim:/usr/bin/vi:/usr/bin/nano"
+   Defaults timestamp_timeout=15
+   Defaults passprompt="[sudo] password for %u: "
+   Defaults lecture=never
+
+#some seting to kernel parameter; nano /boot/loader/entries/arch.conf
+
+   apparmor=1 security=apparmor quiet splash loglevel=3 rd.udev.log_priority=3 vt.global_cursor_default=0 audit=0
+   
+#set playmouth HOOKS initramfs Nvidia module nouveau; nano /etc/mkinitcpio.conf 
+
+   MODULES="nouveau"
+   HOOKS="base systemd sd-plymouth udev autodetect keyboard sd-vconsole modconf block sd-encrypt sd-lvm2 filesystems fsck"
+
+   sudo plymouth-set-default-theme -R arch-breeze
+   sudo ln -sf /usr/share/plymouth/themes/arch-breeze/logo{_full_grey_dark,}.png
+
+#set ufw default rules to deny incoming and allow outgoing connections;
+
+   sudo ufw default deny incoming
+   sudo ufw default allow outgoing
+
+#Disable remote ping; sudo nano /etc/ufw/before.rules
+
+   # ok icmp codes for INPUT
+   -A ufw-before-input -p icmp --icmp-type destination-unreachable -j DROP
+   -A ufw-before-input -p icmp --icmp-type time-exceeded -j DROP
+   -A ufw-before-input -p icmp --icmp-type parameter-problem -j DROP
+   -A ufw-before-input -p icmp --icmp-type echo-request -j DROP
+
+#Disable UFW logging
+   
+   ufw logging off
+       
+#Enable Ufw
+   
+   sudo ufw enable
+
+#setup dnscrypt-proxy;sudo nano /etc/dnscrypt-proxy/dnscrypt-proxy.toml
+   
+   listen_addresses = ['127.0.0.1:53']
+
+#setup resolv.conf; sudo nano /etc/resolv.conf
+   
+   nameserver 127.0.0.1
+
+#make resolv.conf unchangeable by anyone on your system
+   
+   sudo chattr +i /etc/resolv.conf
+ 
+#makepkg optimis; sudo nano /etc/makepkg.conf
+   #my laptop core i3
+   
+   CFLAGS="-march=haswell -O2 -pipe -fno-plt"
+   CXXFLAGS="${CFLAGS}"
+
+   #my Desktop amd Phenom II
+      
+   CFLAGS="-O2 -march=amdfam10 -pipe"
+   CXXFLAGS="${CFLAGS}"
+      
+   #my laptop and Desktop
+   
+   MAKEFLAGS="-j$(nproc)"
+   BUILDENV=(!distcc color ccache check !sign)
+   COMPRESSGZ=(pigz -c -f -n)
+   COMPRESSXZ=(xz -c -z - --threads=0)
+   COMPRESSLZO=(lzop -q)
+
+#add ccache path env; sudo nano /etc/profile
+   
+   appendpath '/usr/lib/ccache/bin'
+
+#enable some services
+  
+   sudo systemctl enable apparmor.service
+   sudo systemctl enable lightdm-plymouth.service
+   sudo systemctl enable dnscrypt-proxy
+   sudo systemctl enable ufw.service
+   systemctl --user enable mpd.service
+   
+#reboot
+   
+   sudo systemctl reboot

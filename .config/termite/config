@@ -1,0 +1,51 @@
+[options]
+
+allow_bold 		= true
+audible_bell 		= true
+browser 		= xdg-open
+clickable_url 		= false
+cursor_blink 		= system
+cursor_shape 		= underline
+dynamic_title 		= false
+filter_unmatched_urls 	= false
+font 			= Bitstream Vera Sans Mono 10
+geometry 		= 480x280
+icon_name 		= terminal
+modify_other_keys 	= false
+mouse_autohide 		= false
+scroll_on_output 	= false
+scroll_on_keystroke 	= true
+scrollback_lines	= 15000
+size_hints 		= false
+search_wrap 		= true
+urgent_on_bell 		= true
+highlight 		= #30343e
+
+[colors]
+background 		= rgba(30, 27, 27, 0.8)
+foreground 		= #ffffff
+cursor 			= #e1ff00
+
+color0 = #000000
+color1 = #ff001e
+color2 = #00ff15
+color3 = #c9c8bf
+color4 = #3db8ff
+color5 = #ffff00
+color6 = #008dff
+color7 = #c5c8c6
+color8 = #969896
+color9 = #ff0000
+color10 = #00ff15
+color11 = #fff796
+color12 = #008dff
+color13 = #ffff00
+color14 = #71bebe
+color15 = #ffffff
+color16 = #f70000
+color17 = #3971ED
+color18 = #7d7e80
+color19 = #373b41
+color20 = #b4b7b4
+color21 = #e0e0e0
+
