@@ -224,8 +224,8 @@ II. After-installation
    
 #Dotfile Setup
 
-   git clone https://github.com/djohanarch/Desktop-Arch.git
-   cd Desktop-Arch
+   git https://github.com/djohanarch/mysetup.git
+   cd mysetup
    sudo pacman -S --needed $(comm -12 <(pacman -Slq|sort) <(sort pkglist.txt) )
    yay -S --noconfirm --needed aurpkglist.txt
    mv -f .* ~/
