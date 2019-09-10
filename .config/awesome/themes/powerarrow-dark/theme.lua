@@ -14,19 +14,42 @@ theme.font                                      = "Bitstream Vera Sans Mono 9"
 theme.fg_normal                                 = "#FFFFFF"
 theme.fg_focus                                  = "#46A8C3"
 theme.fg_urgent                                 = "#FF1919"
-theme.bg_normal                                 = "#1A1A1A"
-theme.bg_focus                                  = "#313131"
-theme.bg_urgent                                 = "#1A1A1A"
+theme.bg_normal                                 = "#00000000"
+theme.bg_focus                                  = "#00000000"
+theme.bg_urgent                                 = "#00000000"
 theme.border_width                              = dpi(0)
 theme.border_normal                             = "#3F3F3F"
 theme.border_focus                              = "#7F7F7F"
-theme.border_marked                             = "#CC9393"
-theme.tasklist_bg_focus                         = "#1A1A1A"
+theme.border_marked                             = "#46A8C3"
+theme.tasklist_bg_focus                         = "#00000000"
 theme.titlebar_bg_focus                         = theme.bg_focus
 theme.titlebar_bg_normal                        = theme.bg_normal
 theme.titlebar_fg_focus                         = theme.fg_focus
-theme.menu_height                               = dpi(16)
-theme.menu_width                                = dpi(140)
+theme.prompt_bg_cursor				= "#7AC82E"
+theme.prompt_bg					= "#00000000"
+theme.prompt_fg_cursor				= "#FFFFFF"
+theme.prompt_fg					= "#FFFFFF"
+theme.prompt_font				= theme.font
+theme.notification_font 			= theme.font
+theme.notification_bg 				= theme.bg_normal
+theme.notification_fg 				= theme.fg_normal
+theme.notification_border_color 		= "#00000000"
+theme.notification_border_width 		= dpi(0)
+theme.notification_margin 			= dpi(10)
+theme.notification_spacing 			= dpi(10)
+theme.notification_shape 			= function(cr, width, height) gears.shape.rounded_rect(cr, width, height, theme.corner_radius) end
+theme.hotkeys_bg				= "#000010"
+theme.hotkeys_fg				= "#FFFFFF"
+theme.hotkeys_font				= theme.font
+theme.hotkeys_description_font			= theme.font
+theme.hotkeys_modifiers_fg 			= "#8ec07c"
+theme.hotkeys_shape				= function(cr,w,h) gears.shape.rounded_rect(cr,w,h,theme.border_radius) end
+theme.menu_height                               = dpi(20)
+theme.menu_width                                = dpi(230)
+theme.menu_fg_normal                            = "#FFFFFF"
+theme.menu_fg_focus                             = "#7AC82E"
+theme.menu_bg_normal                            = "#1A1A1A"
+theme.menu_bg_focus                             = "#1A1A1A"
 theme.menu_submenu_icon                         = theme.dir .. "/icons/submenu.png"
 theme.taglist_fg_focus    			= "#7AC82E"
 theme.taglist_fg_occupied 			= "#46A8C3"
@@ -34,8 +57,6 @@ theme.taglist_fg_urgent   			= "#ff3a3a"
 theme.taglist_fg_empty			        = "#ffffff"
 theme.taglist_spacing			        = 2
 theme.taglist_font 				= "NanumBarunGothicUltraBold 9"
---theme.taglist_squares_sel                       = theme.dir .. "/icons/square_sel.png"
---theme.taglist_squares_unsel                     = theme.dir .. "/icons/square_unsel.png"
 theme.layout_tile                               = theme.dir .. "/icons/tile.png"
 theme.layout_tileleft                           = theme.dir .. "/icons/tileleft.png"
 theme.layout_tilebottom                         = theme.dir .. "/icons/tilebottom.png"
@@ -67,7 +88,7 @@ theme.widget_mail                               = theme.dir .. "/icons/mail.png"
 theme.widget_mail_on                            = theme.dir .. "/icons/mail_on.png"
 theme.tasklist_plain_task_name                  = true
 theme.tasklist_disable_icon                     = true
-theme.useless_gap                               = dpi(0)
+theme.useless_gap                               = dpi(1)
 theme.titlebar_close_button_focus               = theme.dir .. "/icons/titlebar/close_focus.png"
 theme.titlebar_close_button_normal              = theme.dir .. "/icons/titlebar/close_normal.png"
 theme.titlebar_ontop_button_focus_active        = theme.dir .. "/icons/titlebar/ontop_focus_active.png"
@@ -105,7 +126,7 @@ theme.cal = lain.widget.cal({
     notification_preset = {
         font = "Bitstream Vera Sans Mono 9",
         fg   = theme.fg_normal,
-        bg   = theme.bg_normal 
+        bg   = theme.hotkeys_bg 
     }
 })
 
@@ -193,7 +214,7 @@ local temp = lain.widget.temp({
 -- / fs
 local fsicon = wibox.widget.imagebox(theme.widget_hdd)
 theme.fs = lain.widget.fs({
-    notification_preset = { fg = theme.fg_normal, bg = theme.bg_normal , font = "Bitstream Vera Sans Mono 9" },
+    notification_preset = { fg = theme.fg_normal, bg = theme.hotkeys_bg , font = "Bitstream Vera Sans Mono 9" },
     settings = function()
         widget:set_markup(markup.font(theme.font, " " .. fs_now["/"].percentage .. "% "))
     end
@@ -296,6 +317,7 @@ function theme.at_screen_connect(s)
         layout = wibox.layout.align.horizontal,
         { -- Left widgets
             layout = wibox.layout.fixed.horizontal,
+	    bg = theme.bg_normal,
             --spr,
             s.mytaglist,
             s.mypromptbox,
